@@ -170,15 +170,21 @@ async fn index_html() -> HttpResponse {
     <ul class="todo-list" id="todo-list"></ul>
 
     <script>
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         async function loadTodos() {
             const res = await fetch('/todos');
             const todos = await res.json();
             const list = document.getElementById('todo-list');
             list.innerHTML = todos.map(todo => `
-                <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
-                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${todo.id}', this.checked)">
-                    <span>${todo.title}</span>
-                    <button class="delete-btn" onclick="deleteTodo('${todo.id}')">Delete</button>
+                <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${escapeHtml(todo.id)}">
+                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleTodo('${escapeHtml(todo.id)}', this.checked)">
+                    <span>${escapeHtml(todo.title)}</span>
+                    <button class="delete-btn" onclick="deleteTodo('${escapeHtml(todo.id)}')">Delete</button>
                 </li>
             `).join('');
         }
@@ -211,7 +217,7 @@ async fn index_html() -> HttpResponse {
         }
 
         document.getElementById('add-todo-btn').addEventListener('click', addTodo);
-        document.getElementById('todo-input').addEventListener('keypress', (e) => {
+        document.getElementById('todo-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') addTodo();
         });
 
