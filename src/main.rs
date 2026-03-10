@@ -178,52 +178,97 @@ async fn index_html() -> HttpResponse {
 
     <script>
         async function loadTodos() {
-            const response = await fetch('/todos');
-            const todos = await response.json();
             const list = document.getElementById('todoList');
             list.innerHTML = '';
-            todos.forEach(todo => {
-                const li = document.createElement('li');
-                li.className = 'todo-item' + (todo.completed ? ' completed' : '');
-                li.innerHTML = `
-                    <span>${todo.title}</span>
-                    <button class="toggle-btn" onclick="toggleTodo('${todo.id}', ${!todo.completed})">
-                        ${todo.completed ? 'Undo' : 'Done'}
-                    </button>
-                    <button class="delete-btn" onclick="deleteTodo('${todo.id}')">Delete</button>
-                `;
-                list.appendChild(li);
-            });
+            try {
+                const response = await fetch('/todos');
+                if (!response.ok) {
+                    throw new Error('Failed to load todos: ' + response.status);
+                }
+                const todos = await response.json();
+                todos.forEach(todo => {
+                    const li = document.createElement('li');
+                    li.className = 'todo-item' + (todo.completed ? ' completed' : '');
+
+                    const span = document.createElement('span');
+                    span.textContent = todo.title;
+                    li.appendChild(span);
+
+                    const toggleBtn = document.createElement('button');
+                    toggleBtn.className = 'toggle-btn';
+                    toggleBtn.textContent = todo.completed ? 'Undo' : 'Done';
+                    toggleBtn.addEventListener('click', () => toggleTodo(todo.id, !todo.completed));
+                    li.appendChild(toggleBtn);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.addEventListener('click', () => deleteTodo(todo.id));
+                    li.appendChild(deleteBtn);
+
+                    list.appendChild(li);
+                });
+            } catch (error) {
+                console.error(error);
+                const errorLi = document.createElement('li');
+                errorLi.className = 'todo-item';
+                errorLi.textContent = 'Failed to load todos. Please refresh.';
+                list.appendChild(errorLi);
+            }
         }
 
         async function addTodo() {
             const input = document.getElementById('todoInput');
             const title = input.value.trim();
             if (!title) return;
-            await fetch('/todos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title })
-            });
-            input.value = '';
-            loadTodos();
+            try {
+                const response = await fetch('/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to add todo: ' + response.status);
+                }
+                input.value = '';
+                await loadTodos();
+            } catch (error) {
+                console.error(error);
+                alert('Failed to add todo. Please try again.');
+            }
         }
 
         async function toggleTodo(id, completed) {
-            await fetch(`/todos/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ completed })
-            });
-            loadTodos();
+            try {
+                const response = await fetch('/todos/' + id, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed })
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to update todo: ' + response.status);
+                }
+                await loadTodos();
+            } catch (error) {
+                console.error(error);
+                alert('Failed to update todo. Please try again.');
+            }
         }
 
         async function deleteTodo(id) {
-            await fetch(`/todos/${id}`, { method: 'DELETE' });
-            loadTodos();
+            try {
+                const response = await fetch('/todos/' + id, { method: 'DELETE' });
+                if (!response.ok) {
+                    throw new Error('Failed to delete todo: ' + response.status);
+                }
+                await loadTodos();
+            } catch (error) {
+                console.error(error);
+                alert('Failed to delete todo. Please try again.');
+            }
         }
 
-        document.getElementById('todoInput').addEventListener('keypress', (e) => {
+        document.getElementById('todoInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') addTodo();
         });
 
