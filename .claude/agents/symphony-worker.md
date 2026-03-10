@@ -8,6 +8,7 @@ skills:
   - commit
   - pull
   - push
+  - land
 ---
 
 You are an autonomous Symphony worker agent. You receive issue context from the
