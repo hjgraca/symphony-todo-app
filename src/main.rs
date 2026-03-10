@@ -87,6 +87,155 @@ async fn health() -> HttpResponse {
     HttpResponse::Ok().json(serde_json::json!({"status": "ok"}))
 }
 
+async fn index_html() -> HttpResponse {
+    let html = r#"<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo App</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .add-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .add-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .add-form button {
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .add-form button:hover {
+            background-color: #c82333;
+        }
+        .todo-list {
+            list-style: none;
+            padding: 0;
+        }
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .todo-item.completed span {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .todo-item span {
+            flex: 1;
+        }
+        .todo-item button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .delete-btn {
+            background-color: #6c757d;
+            color: white;
+        }
+        .toggle-btn {
+            background-color: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Todo App</h1>
+    <div class="add-form">
+        <input type="text" id="todoInput" placeholder="Enter a new todo...">
+        <button onclick="addTodo()">Add Todo</button>
+    </div>
+    <ul class="todo-list" id="todoList"></ul>
+
+    <script>
+        async function loadTodos() {
+            const response = await fetch('/todos');
+            const todos = await response.json();
+            const list = document.getElementById('todoList');
+            list.innerHTML = '';
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.className = 'todo-item' + (todo.completed ? ' completed' : '');
+                li.innerHTML = `
+                    <span>${todo.title}</span>
+                    <button class="toggle-btn" onclick="toggleTodo('${todo.id}', ${!todo.completed})">
+                        ${todo.completed ? 'Undo' : 'Done'}
+                    </button>
+                    <button class="delete-btn" onclick="deleteTodo('${todo.id}')">Delete</button>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        async function addTodo() {
+            const input = document.getElementById('todoInput');
+            const title = input.value.trim();
+            if (!title) return;
+            await fetch('/todos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title })
+            });
+            input.value = '';
+            loadTodos();
+        }
+
+        async function toggleTodo(id, completed) {
+            await fetch(`/todos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ completed })
+            });
+            loadTodos();
+        }
+
+        async function deleteTodo(id) {
+            await fetch(`/todos/${id}`, { method: 'DELETE' });
+            loadTodos();
+        }
+
+        document.getElementById('todoInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTodo();
+        });
+
+        loadTodos();
+    </script>
+</body>
+</html>"#;
+    HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(html)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let data = web::Data::new(AppState {
@@ -104,6 +253,7 @@ async fn main() -> std::io::Result<()> {
             .route("/todos/{id}", web::get().to(get_todo))
             .route("/todos/{id}", web::put().to(update_todo))
             .route("/todos/{id}", web::delete().to(delete_todo))
+            .route("/", web::get().to(index_html))
     })
     .bind("127.0.0.1:8080")?
     .run()
