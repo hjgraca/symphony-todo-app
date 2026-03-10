@@ -30,9 +30,9 @@ Use `status:` prefixed labels on GitHub Issues to track workflow state:
 ## UI Validation
 
 When changes touch the UI, you MUST use the Playwright MCP tools to capture a
-screenshot of the running app. The Playwright MCP server is pre-configured in
-`.mcp.json` in the workspace. Start the app with `cargo run &`, then use
+screenshot of the running app, if the `mcp__playwright` tool is available in your
+Symphony environment. Start the app with `cargo run &`, then use
 `mcp__playwright__browser_navigate` to go to `http://127.0.0.1:8080`, interact
 with the UI to demonstrate the change, and take a screenshot with
-`mcp__playwright__browser_screenshot`. Follow the UI Screenshot Capture protocol
-in the WORKFLOW.md for the full procedure.
+`mcp__playwright__browser_screenshot`. Consult your project documentation or
+issue description for any additional UI validation requirements.
