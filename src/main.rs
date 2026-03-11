@@ -169,7 +169,7 @@ async fn index_html() -> HttpResponse {
     </style>
 </head>
 <body>
-    <h1>Todo App</h1>
+    <h1>my todo list</h1>
     <div class="add-form">
         <input type="text" id="todoInput" placeholder="Enter a new todo...">
         <button onclick="addTodo()">Add Todo</button>
