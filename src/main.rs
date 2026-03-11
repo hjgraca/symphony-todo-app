@@ -159,8 +159,11 @@ async fn index_html() -> HttpResponse {
             cursor: pointer;
         }
         .delete-btn {
-            background-color: #6c757d;
+            background-color: #dc3545;
             color: white;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
         }
         .toggle-btn {
             background-color: #28a745;
