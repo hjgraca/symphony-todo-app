@@ -93,7 +93,7 @@ async fn index_html() -> HttpResponse {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo App</title>
+    <title>my todo list</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -169,7 +169,7 @@ async fn index_html() -> HttpResponse {
     </style>
 </head>
 <body>
-    <h1>Todo App</h1>
+    <h1>my todo list</h1>
     <div class="add-form">
         <input type="text" id="todoInput" placeholder="Enter a new todo...">
         <button onclick="addTodo()">Add Todo</button>
