@@ -1,44 +1,93 @@
-use actix_web::{web, App, HttpServer, HttpResponse};
+use actix_web::{web, App, HttpResponse, HttpServer};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use utoipa::{OpenApi, ToSchema};
+use utoipa_swagger_ui::SwaggerUi;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 struct Todo {
+    #[schema(example = "0f6c15ad-e8c6-4478-8f62-2606e2829654")]
     id: String,
+    #[schema(example = "Buy milk")]
     title: String,
+    #[schema(example = false)]
     completed: bool,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 struct CreateTodo {
+    #[schema(example = "Buy milk")]
     title: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 struct UpdateTodo {
+    #[schema(example = "Buy eggs")]
     title: Option<String>,
+    #[schema(example = true)]
     completed: Option<bool>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct ErrorResponse {
+    #[schema(example = "Todo not found")]
+    error: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct HealthResponse {
+    #[schema(example = "ok")]
+    status: String,
 }
 
 struct AppState {
     todos: Mutex<Vec<Todo>>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/todos",
+    responses(
+        (status = 200, description = "List all todos", body = [Todo])
+    )
+)]
 async fn list_todos(data: web::Data<AppState>) -> HttpResponse {
     let todos = data.todos.lock().unwrap();
     HttpResponse::Ok().json(todos.clone())
 }
 
+#[utoipa::path(
+    get,
+    path = "/todos/{id}",
+    params(
+        ("id" = String, Path, description = "Todo ID")
+    ),
+    responses(
+        (status = 200, description = "Todo found", body = Todo),
+        (status = 404, description = "Todo not found", body = ErrorResponse)
+    )
+)]
 async fn get_todo(data: web::Data<AppState>, path: web::Path<String>) -> HttpResponse {
     let id = path.into_inner();
     let todos = data.todos.lock().unwrap();
     match todos.iter().find(|t| t.id == id) {
         Some(todo) => HttpResponse::Ok().json(todo),
-        None => HttpResponse::NotFound().json(serde_json::json!({"error": "Todo not found"})),
+        None => HttpResponse::NotFound().json(ErrorResponse {
+            error: "Todo not found".to_string(),
+        }),
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/todos",
+    request_body = CreateTodo,
+    responses(
+        (status = 201, description = "Todo created", body = Todo),
+        (status = 400, description = "Invalid request", body = ErrorResponse)
+    )
+)]
 async fn create_todo(data: web::Data<AppState>, body: web::Json<CreateTodo>) -> HttpResponse {
     let todo = Todo {
         id: Uuid::new_v4().to_string(),
@@ -50,6 +99,18 @@ async fn create_todo(data: web::Data<AppState>, body: web::Json<CreateTodo>) -> 
     HttpResponse::Created().json(todo)
 }
 
+#[utoipa::path(
+    put,
+    path = "/todos/{id}",
+    params(
+        ("id" = String, Path, description = "Todo ID")
+    ),
+    request_body = UpdateTodo,
+    responses(
+        (status = 200, description = "Todo updated", body = Todo),
+        (status = 404, description = "Todo not found", body = ErrorResponse)
+    )
+)]
 async fn update_todo(
     data: web::Data<AppState>,
     path: web::Path<String>,
@@ -67,10 +128,23 @@ async fn update_todo(
             }
             HttpResponse::Ok().json(todo.clone())
         }
-        None => HttpResponse::NotFound().json(serde_json::json!({"error": "Todo not found"})),
+        None => HttpResponse::NotFound().json(ErrorResponse {
+            error: "Todo not found".to_string(),
+        }),
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/todos/{id}",
+    params(
+        ("id" = String, Path, description = "Todo ID")
+    ),
+    responses(
+        (status = 204, description = "Todo deleted"),
+        (status = 404, description = "Todo not found", body = ErrorResponse)
+    )
+)]
 async fn delete_todo(data: web::Data<AppState>, path: web::Path<String>) -> HttpResponse {
     let id = path.into_inner();
     let mut todos = data.todos.lock().unwrap();
@@ -79,12 +153,23 @@ async fn delete_todo(data: web::Data<AppState>, path: web::Path<String>) -> Http
     if todos.len() < len_before {
         HttpResponse::NoContent().finish()
     } else {
-        HttpResponse::NotFound().json(serde_json::json!({"error": "Todo not found"}))
+        HttpResponse::NotFound().json(ErrorResponse {
+            error: "Todo not found".to_string(),
+        })
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/health",
+    responses(
+        (status = 200, description = "Service health", body = HealthResponse)
+    )
+)]
 async fn health() -> HttpResponse {
-    HttpResponse::Ok().json(serde_json::json!({"status": "ok"}))
+    HttpResponse::Ok().json(HealthResponse {
+        status: "ok".to_string(),
+    })
 }
 
 async fn index_html() -> HttpResponse {
@@ -281,6 +366,16 @@ async fn index_html() -> HttpResponse {
         .body(html)
 }
 
+#[derive(OpenApi)]
+#[openapi(
+    paths(health, list_todos, get_todo, create_todo, update_todo, delete_todo),
+    components(schemas(Todo, CreateTodo, UpdateTodo, ErrorResponse, HealthResponse)),
+    tags(
+        (name = "todo-app", description = "Todo API")
+    )
+)]
+struct ApiDoc;
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let data = web::Data::new(AppState {
@@ -292,6 +387,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
+            .service(SwaggerUi::new("/docs/{_:.*}").url("/openapi.json", ApiDoc::openapi()))
             .route("/health", web::get().to(health))
             .route("/todos", web::get().to(list_todos))
             .route("/todos", web::post().to(create_todo))
