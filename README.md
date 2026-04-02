@@ -22,6 +22,13 @@ Server starts on `http://127.0.0.1:8080`.
 | PUT    | /todos/{id}    | `{"title": "...", "completed": true}` | Update a todo |
 | DELETE | /todos/{id}    | —                                 | Delete a todo      |
 
+### OpenAPI docs
+
+- OpenAPI spec (JSON): `http://127.0.0.1:8080/openapi.json`
+- Interactive Swagger UI: `http://127.0.0.1:8080/docs`
+
+Use Swagger UI to inspect schemas and execute requests directly against the running app.
+
 ## Example workflow test
 
 ```bash
