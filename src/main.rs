@@ -366,6 +366,10 @@ async fn index_html() -> HttpResponse {
         .body(html)
 }
 
+async fn openapi_json() -> HttpResponse {
+    HttpResponse::Ok().json(ApiDoc::openapi())
+}
+
 #[derive(OpenApi)]
 #[openapi(
     paths(health, list_todos, get_todo, create_todo, update_todo, delete_todo),
@@ -388,6 +392,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(data.clone())
             .service(SwaggerUi::new("/docs/{_:.*}").url("/openapi.json", ApiDoc::openapi()))
+            .route("/openapi.json", web::get().to(openapi_json))
             .route("/health", web::get().to(health))
             .route("/todos", web::get().to(list_todos))
             .route("/todos", web::post().to(create_todo))
