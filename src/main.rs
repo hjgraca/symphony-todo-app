@@ -120,7 +120,7 @@ async fn index_html() -> HttpResponse {
         }
         .add-form button {
             padding: 10px 20px;
-            background: linear-gradient(to right, #ff6b9d, #667eea);
+            background-color: #28a745;
             color: white;
             border: none;
             border-radius: 4px;
@@ -129,7 +129,7 @@ async fn index_html() -> HttpResponse {
             font-weight: bold;
         }
         .add-form button:hover {
-            background: linear-gradient(to right, #ff4d8d, #4f6dd8);
+            background-color: #218838;
         }
         .todo-list {
             list-style: none;
